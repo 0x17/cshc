@@ -1,4 +1,5 @@
 import functools
+from joblib import Parallel, delayed
 
 
 def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row vectors
@@ -11,12 +12,24 @@ def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row 
 
 
 def split_cost(instances, feature_ix, split_value):
-    def num_misclassifications(func):
+    '''def num_misclassifications(func):
         in_subset = lambda instance: func(instance[feature_ix] < split_value)
         card, csum = functools.reduce(lambda acc, instance: (acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)), instances, (0, 0))
         return card - csum if csum > card / 2 else csum
+    return num_misclassifications(lambda x: x) + num_misclassifications(lambda x: not x)'''
 
-    return num_misclassifications(lambda x: x) + num_misclassifications(lambda x: not x)
+    sleft, sright = 0, 0
+    sleft_card, sright_card = 0, 0
+    for instance in instances:
+        if instance[feature_ix] < split_value:
+            sleft += instance[-1]
+            sleft_card += 1
+        else:
+            sright += instance[-1]
+            sright_card += 1
+    nmisclass_left = sleft_card - sleft if sleft > sleft_card / 2 else sleft
+    nmisclass_right = sright_card - sright if sright > sright_card / 2 else sright
+    return nmisclass_left + nmisclass_right
 
 
 def possible_splits(instances):
@@ -30,19 +43,31 @@ def possible_splits(instances):
                 yield feature_ix, val
 
 
-def cheapest_split(instances):
+def cheapest_split(instances, parallel=True):
     print(f'Cheapest split for {len(instances)} instances...')
-    best_split = (0, 0)
-    best_cost = -1
-    for feature_ix, val in possible_splits(instances):
-        cost = split_cost(instances, feature_ix, val)
-        if best_cost == -1 or cost < best_cost:
-            best_cost = cost
-            best_split = (feature_ix, val)
-            print('New split incumbent ' + str(best_split) + ' with cost ' + str(best_cost))
+
+    if parallel:
+        def compute_split_cost(feature_ix, val):
+            return feature_ix, val, split_cost(instances, feature_ix, val)
+
+        results = Parallel(n_jobs=-1)(delayed(compute_split_cost)(feature_ix, val) for feature_ix, val in possible_splits(instances))
+        mincost = min(res[2] for res in results)
+        best_split = next(res for res in results if res[2] == mincost)
+        best_cost = mincost
+    else:
+        best_split = (0, 0)
+        best_cost = -1
+
+        for feature_ix, val in possible_splits(instances):
+            cost = split_cost(instances, feature_ix, val)
+            if best_cost == -1 or cost < best_cost:
+                best_cost = cost
+                best_split = (feature_ix, val)
+                print('New split incumbent ' + str(best_split) + ' with cost ' + str(best_cost))
+
     res = split(instances, best_split[0], best_split[1])
     res['cost'] = best_cost
-    print('Found split '+str(best_split)+' with cost '+str(best_cost))
+    print('Found split ' + str(best_split) + ' with cost ' + str(best_cost))
     return res
 
 
@@ -72,8 +97,8 @@ def build_tree(instances, depth=0, max_depth=5, min_clustersize=10):
         return dom_class(res['l'])
     lsubtree, rsubtree = dom_class(res['l']) if lsize < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['l'], depth + 1, max_depth), \
                          dom_class(res['r']) if rsize < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['r'], depth + 1, max_depth)
-    #if isinstance(lsubtree, float) and isinstance(rsubtree, float):
-        #return round((lsubtree + rsubtree) / 2)
+    # if isinstance(lsubtree, float) and isinstance(rsubtree, float):
+    # return round((lsubtree + rsubtree) / 2)
     return Node(res['feature_ix'], res['value'], lsubtree, rsubtree)
 
 
