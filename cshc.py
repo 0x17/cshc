@@ -18,16 +18,18 @@ def split_cost(instances, feature_ix, split_value):
         in_subset = lambda instance: func(instance[feature_ix] < split_value)
         card, csum = functools.reduce(lambda acc, instance: (acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)), instances, (0, 0))
         return card - csum if csum > card / 2 else csum
-
     return num_misclassifications(lambda x: x) + num_misclassifications(lambda x: not x)
 
 
 def possible_splits(instances):
     nfeatures = len(instances[0]) - 1
     for feature_ix in range(nfeatures):
+        vals = []
         for instance in instances:
             val = instance[feature_ix]
-            yield feature_ix, val
+            if val not in vals:
+                vals.append(val)
+                yield feature_ix, val
 
 
 def cheapest_split(instances):
@@ -62,10 +64,8 @@ def dom_class(instances):
 
 def build_tree(instances, depth=0, max_depth=5):
     res = cheapest_split(instances)
-    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res[
-        'cost'] > 0.0 else dom_class(res['l'])
-    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res[
-        'cost'] > 0.0 else dom_class(res['r'])
+    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res['cost'] > 0.0 else dom_class(res['l'])
+    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res['cost'] > 0.0 else dom_class(res['r'])
     return Node(res['feature_ix'], res['value'], lsubtree, rsubtree)
 
 
@@ -85,7 +85,7 @@ def predict_with_tree(root_node, instance):
 def main(args):
     def to_f(vals): return [float(x) for x in vals]
 
-    with open('iris.csv', 'r') as fp:
+    with open('dataforcshc.csv', 'r') as fp:
         instances = [to_f(line.split(',')) for line in fp.readlines()[1:]]
 
     random.shuffle(instances)
