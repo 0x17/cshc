@@ -12,23 +12,27 @@ def main(args):
 
     random.seed(1)
 
-    with open('iris.csv', 'r') as fp:
+    with open('dataforcshc.csv', 'r') as fp:
         instances = [to_f(line.split(',')) for line in fp.readlines()[1:]]
 
     train, val = train_validation_split(instances, train_split=0.9, shuffle=True)
-
-    #clf = build_tree(train)
-    clf = create_ensemble(4, train, num_features=20)
-
-    # pred_y = predict_with_tree(tree, instances[3])
-    # true_y = instances[3][-1]
-
-    pred_ys = predictions_with_ensemble(clf, val)
     true_ys = [instance[-1] for instance in val]
-    print(f'Accuracy: {accuracy(true_ys, pred_ys)}')
 
-    for ix, tree in enumerate(clf):
-        tree_to_pdf(tree, f'meinbaum_{ix+1}')
+    use_ensemble = True
+
+    if not use_ensemble:
+        clf = build_tree(train)
+        pred_ys = predictions_with_tree(clf, val)
+        print(f'Accuracy: {accuracy(true_ys, pred_ys)}')
+        tree_to_pdf(clf, f'meinbaum')
+    else:
+        clf = create_ensemble(10, train, num_features=20, max_depth=10)
+        pred_ys = predictions_with_ensemble(clf, val)
+        print(f'Accuracy with ensemble: {accuracy(true_ys, pred_ys)}')
+        for ix, tree in enumerate(clf):
+            pred_ys = predictions_with_tree(tree, val)
+            print(f'Accuracy with tree {ix+1}: {accuracy(true_ys, pred_ys)}')
+            tree_to_pdf(tree, f'meinbaum_{ix+1}')
 
 
 if __name__ == '__main__':

@@ -34,6 +34,7 @@ def possible_splits(instances):
 
 
 def cheapest_split(instances):
+    print(f'Cheapest split for {len(instances)} instances...')
     best_split = (0, 0)
     best_cost = -1
     for feature_ix, val in possible_splits(instances):
@@ -41,8 +42,10 @@ def cheapest_split(instances):
         if best_cost == -1 or cost < best_cost:
             best_cost = cost
             best_split = (feature_ix, val)
+            print('New split incumbent ' + str(best_split) + ' with cost ' + str(best_cost))
     res = split(instances, best_split[0], best_split[1])
     res['cost'] = best_cost
+    print('Found split '+str(best_split)+' with cost '+str(best_cost))
     return res
 
 
@@ -63,12 +66,17 @@ def dom_class(instances):
     return 1.0 if sum(inst[-1] for inst in instances) > len(instances) / 2 else 0.0
 
 
-def build_tree(instances, depth=0, max_depth=5):
+def build_tree(instances, depth=0, max_depth=5, min_clustersize=10):
     res = cheapest_split(instances)
-    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res[
-        'cost'] > 0.0 else dom_class(res['l'])
-    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res[
-        'cost'] > 0.0 else dom_class(res['r'])
+    lsize, rsize = len(res['l']), len(res['r'])
+    if lsize == 0:
+        return dom_class(res['r'])
+    if rsize == 0:
+        return dom_class(res['l'])
+    lsubtree, rsubtree = dom_class(res['l']) if len(res['l']) < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['l'], depth + 1, max_depth), \
+                         dom_class(res['r']) if len(res['r']) < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['r'], depth + 1, max_depth)
+    #if isinstance(lsubtree, float) and isinstance(rsubtree, float):
+        #return round((lsubtree + rsubtree) / 2)
     return Node(res['feature_ix'], res['value'], lsubtree, rsubtree)
 
 
