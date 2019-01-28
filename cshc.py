@@ -2,6 +2,7 @@ import sys
 import random
 from gviz_helpers import tree_to_pdf
 import functools
+import math
 
 
 def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row vectors
@@ -16,8 +17,12 @@ def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row 
 def split_cost(instances, feature_ix, split_value):
     def num_misclassifications(func):
         in_subset = lambda instance: func(instance[feature_ix] < split_value)
-        card, csum = functools.reduce(lambda acc, instance: (acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)), instances, (0, 0))
+        card, csum = functools.reduce(lambda acc, instance: (
+            acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)),
+                                      instances,
+                                      (0, 0))
         return card - csum if csum > card / 2 else csum
+
     return num_misclassifications(lambda x: x) + num_misclassifications(lambda x: not x)
 
 
@@ -64,8 +69,10 @@ def dom_class(instances):
 
 def build_tree(instances, depth=0, max_depth=5):
     res = cheapest_split(instances)
-    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res['cost'] > 0.0 else dom_class(res['l'])
-    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res['cost'] > 0.0 else dom_class(res['r'])
+    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res[
+        'cost'] > 0.0 else dom_class(res['l'])
+    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res[
+        'cost'] > 0.0 else dom_class(res['r'])
     return Node(res['feature_ix'], res['value'], lsubtree, rsubtree)
 
 
@@ -82,16 +89,38 @@ def predict_with_tree(root_node, instance):
             return predict_with_tree(root_node.right, instance)
 
 
+def train_validation_split(samples, train_split=0.5, shuffle=True):
+    sc = samples.copy()
+    if shuffle: random.shuffle(sc)
+    scl = len(sc)
+    split_index = int(math.floor(scl * train_split))
+    return sc[:split_index + 1], sc[split_index + 1:]
+
+
+def predictions_with_tree(root_node, instances):
+    return [predict_with_tree(root_node, instance) for instance in instances]
+
+
+def accuracy(true_ys, pred_ys):
+    return sum(1 if true_y == pred_ys[ix] else 0 for ix, true_y in enumerate(true_ys)) / len(true_ys)
+
+
 def main(args):
     def to_f(vals): return [float(x) for x in vals]
 
-    with open('dataforcshc.csv', 'r') as fp:
+    with open('iris.csv', 'r') as fp:
         instances = [to_f(line.split(',')) for line in fp.readlines()[1:]]
 
-    random.shuffle(instances)
-    tree = build_tree(instances)
+    train, val = train_validation_split(instances, train_split=0.5, shuffle=True)
+    tree = build_tree(train)
+
     # pred_y = predict_with_tree(tree, instances[3])
     # true_y = instances[3][-1]
+
+    pred_ys = predictions_with_tree(tree, val)
+    true_ys = [instance[-1] for instance in val]
+    print(f'Accuracy: {accuracy(true_ys, pred_ys)}')
+
     tree_to_pdf(tree, 'meinbaum')
 
 
