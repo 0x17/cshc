@@ -1,6 +1,7 @@
 import sys
 import random
 from gviz_helpers import tree_to_pdf
+import functools
 
 
 def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row vectors
@@ -9,14 +10,16 @@ def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row 
     return {'feature_ix': feature_ix,
             'value': split_value,
             'l': lsubset,
-            'r': rsubset,
-            'cost': nmisclass(lsubset) + nmisclass(rsubset)}
+            'r': rsubset}
 
 
-def nmisclass(subset):
-    card = len(subset)
-    csum = sum(instance[-1] for instance in subset)  # instance is [xs...y] row vector
-    return card - csum if csum > card / 2 else csum
+def split_cost(instances, feature_ix, split_value):
+    def num_misclassifications(func):
+        in_subset = lambda instance: func(instance[feature_ix] < split_value)
+        card, csum = functools.reduce(lambda acc, instance: (acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)), instances, (0, 0))
+        return card - csum if csum > card / 2 else csum
+
+    return num_misclassifications(lambda x: x) + num_misclassifications(lambda x: not x)
 
 
 def possible_splits(instances):
@@ -28,18 +31,16 @@ def possible_splits(instances):
 
 
 def cheapest_split(instances):
-    best_split = {
-        'feature_ix': 0,
-        'value': 0,
-        'l': [],
-        'r': [],
-        'cost': -1
-    }
+    best_split = (0, 0)
+    best_cost = -1
     for feature_ix, val in possible_splits(instances):
-        res = split(instances, feature_ix, val)
-        if best_split['cost'] == -1 or res['cost'] < best_split['cost']:
-            best_split = res
-    return best_split
+        cost = split_cost(instances, feature_ix, val)
+        if best_cost == -1 or cost < best_cost:
+            best_cost = cost
+            best_split = (feature_ix, val)
+    res = split(instances, best_split[0], best_split[1])
+    res['cost'] = best_cost
+    return res
 
 
 class Node:
@@ -61,8 +62,10 @@ def dom_class(instances):
 
 def build_tree(instances, depth=0, max_depth=5):
     res = cheapest_split(instances)
-    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res['cost'] > 0.0 else dom_class(res['l'])
-    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res['cost'] > 0.0 else dom_class(res['r'])
+    lsubtree = build_tree(res['l'], depth + 1, max_depth) if len(res['l']) >= 10 and depth < max_depth and res[
+        'cost'] > 0.0 else dom_class(res['l'])
+    rsubtree = build_tree(res['r'], depth + 1, max_depth) if len(res['r']) >= 10 and depth < max_depth and res[
+        'cost'] > 0.0 else dom_class(res['r'])
     return Node(res['feature_ix'], res['value'], lsubtree, rsubtree)
 
 
