@@ -13,10 +13,7 @@ def split(instances, feature_ix, split_value):  # set is matrix of [xs...y] row 
 def split_cost(instances, feature_ix, split_value):
     def num_misclassifications(func):
         in_subset = lambda instance: func(instance[feature_ix] < split_value)
-        card, csum = functools.reduce(lambda acc, instance: (
-            acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)),
-                                      instances,
-                                      (0, 0))
+        card, csum = functools.reduce(lambda acc, instance: (acc[0] + (1 if in_subset(instance) else 0), acc[1] + (instance[-1] if in_subset(instance) else 0)), instances, (0, 0))
         return card - csum if csum > card / 2 else csum
 
     return num_misclassifications(lambda x: x) + num_misclassifications(lambda x: not x)
@@ -73,8 +70,8 @@ def build_tree(instances, depth=0, max_depth=5, min_clustersize=10):
         return dom_class(res['r'])
     if rsize == 0:
         return dom_class(res['l'])
-    lsubtree, rsubtree = dom_class(res['l']) if len(res['l']) < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['l'], depth + 1, max_depth), \
-                         dom_class(res['r']) if len(res['r']) < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['r'], depth + 1, max_depth)
+    lsubtree, rsubtree = dom_class(res['l']) if lsize < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['l'], depth + 1, max_depth), \
+                         dom_class(res['r']) if rsize < min_clustersize or res['cost'] == 0.0 or depth >= max_depth else build_tree(res['r'], depth + 1, max_depth)
     #if isinstance(lsubtree, float) and isinstance(rsubtree, float):
         #return round((lsubtree + rsubtree) / 2)
     return Node(res['feature_ix'], res['value'], lsubtree, rsubtree)

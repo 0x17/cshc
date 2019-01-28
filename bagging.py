@@ -3,7 +3,9 @@ import random
 
 
 def random_indices(n, ub):
-    return [random.randint(0, ub - 1) for j in range(n)]
+    l = list(range(ub))
+    random.shuffle(l)
+    return l[:n]
 
 
 def create_ensemble(num_trees, instances, num_features=-1, max_depth=5, subsample_size=-1):

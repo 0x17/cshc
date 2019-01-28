@@ -26,7 +26,7 @@ def main(args):
         print(f'Accuracy: {accuracy(true_ys, pred_ys)}')
         tree_to_pdf(clf, f'meinbaum')
     else:
-        clf = create_ensemble(10, train, num_features=20, max_depth=10)
+        clf = create_ensemble(5, train, num_features=40, max_depth=8, subsample_size=200)
         pred_ys = predictions_with_ensemble(clf, val)
         print(f'Accuracy with ensemble: {accuracy(true_ys, pred_ys)}')
         for ix, tree in enumerate(clf):
