@@ -1,7 +1,7 @@
 import os
 
 def tree_to_graphviz_str(root_node, prefix='0'):
-    root_node_label = f"feat={root_node.feature_ix},value={root_node.value}"
+    root_node_label = f"feat={root_node.feature_ix},value={root_node.value},cost={root_node.cost}"
     ostr = f'{prefix} [label="{root_node_label}"];\n'
 
     if isinstance(root_node.left, float):

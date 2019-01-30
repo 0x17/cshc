@@ -1,5 +1,8 @@
 import math
 import random
+import sys
+
+verbose = False
 
 
 def train_validation_split(samples, train_split=0.5, shuffle=True):
@@ -12,3 +15,9 @@ def train_validation_split(samples, train_split=0.5, shuffle=True):
 
 def accuracy(true_ys, pred_ys):
     return sum(1 if true_y == pred_ys[ix] else 0 for ix, true_y in enumerate(true_ys)) / len(true_ys)
+
+
+def log(message):
+    if verbose:
+        print(message)
+        sys.stdout.flush()
