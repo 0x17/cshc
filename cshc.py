@@ -1,3 +1,4 @@
+import math
 import sys
 import random
 import utils
@@ -9,7 +10,7 @@ from utils import train_validation_split, accuracy
 
 
 def main(args):
-    utils.verbose = True
+    utils.verbose = False
 
     def to_f(vals): return [float(x) for x in vals]
 
@@ -41,7 +42,7 @@ def main(args):
         print(f'Accuracy: {accuracy(true_ys, pred_ys)}')
         tree_to_pdf(clf, f'meinbaum')
     else:
-        clf = create_ensemble(10, train, num_features=50, max_depth=9999, subsample_size=500)
+        clf = create_ensemble(500, train, num_features=round(math.sqrt(len(instances[0])-1)*0.7), max_depth=9999, subsample_size=round(0.7*len(instances)))
         pred_ys = predictions_with_ensemble(clf, test)
         print(f'Accuracy with ensemble: {accuracy(true_ys, pred_ys)}')
         for ix, tree in enumerate(clf):

@@ -21,6 +21,7 @@ def create_ensemble(num_trees, instances, num_features=-1, max_depth=5, subsampl
         subsample = [[feature for feature_index, feature in enumerate(instance) if feature_index in selected_features] for instance_index, instance in enumerate(instances) if instance_index in selected_instances]
         ensemble.append(cart.build_tree(subsample, max_depth=max_depth))
         log(f'Tree no. {i + 1} built...')
+        print(f'Tree no. {i + 1} built...')
     return ensemble
 
 

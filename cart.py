@@ -107,7 +107,7 @@ def dom_class(instances):
 
 
 def build_tree(instances, depth=0, max_depth=5, min_clustersize=0):
-    res = cheapest_split(instances, parallel=False)
+    res = cheapest_split(instances, parallel=True)
 
     if res['cost'] == 0: log('Hit zero cost')
     if depth >= max_depth: log('Hit max depth')
